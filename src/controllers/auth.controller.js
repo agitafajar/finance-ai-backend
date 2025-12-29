@@ -47,10 +47,9 @@ exports.register = async (req, res) => {
       [user.id, otp_hash, expires_at]
     );
 
-    await sendOtpDummy(email, otp);
+    await sendOTPEmail(email, otp);
+return res.json({ message: "OTP resent to email", email });
 
-    // NOTE: sementara OTP dikirim balik untuk test (hapus saat production)
-    return res.json({ message: "OTP created (debug mode)", email, otp });
   } catch (e) {
     return res.status(500).json({ message: "Register failed", error: e.message });
   }
@@ -134,9 +133,9 @@ exports.resendOtp = async (req, res) => {
       [user.id, otp_hash, expires_at]
     );
 
-    await sendOtpDummy(email, otp);
+    await sendOTPEmail(email, otp);
+    return res.json({ message: "OTP sent to email", email });
 
-    return res.json({ message: "OTP resent (debug mode)", email, otp });
   } catch (e) {
     return res.status(500).json({ message: "Resend failed", error: e.message });
   }
