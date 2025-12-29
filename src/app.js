@@ -6,6 +6,7 @@ require("dotenv").config();
 const uploadRoutes = require("./routes/upload.routes");
 
 const authRoutes = require("./routes/auth.routes");
+const scanRoutes = require("./routes/scan.routes");
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use("/upload", uploadRoutes);
+app.use("/scan", scanRoutes);
 
 // anti spam global (basic)
 app.use(rateLimit({

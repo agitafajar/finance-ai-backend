@@ -9,6 +9,10 @@ router.post("/receipt", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "File required" });
 
+    if (!req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({ message: "Only image allowed" });
+    }
+
     const { url, key } = await uploadToS3({
       buffer: req.file.buffer,
       filename: req.file.originalname,
