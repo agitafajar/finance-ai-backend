@@ -52,15 +52,32 @@ router.post("/receipt/parse", upload.single("file"), async (req, res) => {
 
     // ✅ insert DB
     const insertRes = await pool.query(
-      `INSERT INTO transactions(user_id, amount, type, category, description, source, raw_text, created_at)
-   VALUES($1,$2,'expense',$3,$4,'scan',$5,$6,NOW())
-   RETURNING *`,
+      `
+  INSERT INTO transactions (
+    user_id,
+    type,
+    category,
+    amount,
+    description,
+    source,
+    raw_text
+  )
+  VALUES (
+    $1,
+    'expense',
+    $2,
+    $3,
+    $4,
+    'scan',
+    $5
+  )
+  RETURNING *
+  `,
       [
-        1, // TODO: ganti JWT
+        1, // TODO: ganti JWT user_id
+        parsed.category || "Lainnya",
         parsed.total,
-        parsed.category,
         parsed.merchant || "Unknown Merchant",
-        url,
         parsed.raw_text,
       ]
     );
