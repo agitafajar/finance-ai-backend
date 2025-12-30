@@ -17,6 +17,7 @@ app.use(express.json());
 app.use("/upload", uploadRoutes);
 app.use("/scan", scanRoutes);
 app.use("/transactions", require("./routes/transactions.routes"));
+app.use("/stats", require("./routes/stats.routes"));
 
 // anti spam global (basic)
 app.use(
