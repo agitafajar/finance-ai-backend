@@ -47,7 +47,7 @@ router.get("/summary", authMiddleware, async (req, res) => {
     const summaryRes = await pool.query(
       `
       SELECT
-        COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0)::bigint AS total_expense,
+        COALESCE(SUM(CASE WHEN COALESCE(type, 'expense')='expense' THEN amount ELSE 0 END), 0)::bigint AS total_expense,
         COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0)::bigint AS total_income,
         COUNT(*)::int AS transaction_count
       FROM transactions
@@ -100,7 +100,7 @@ router.get("/categories", authMiddleware, async (req, res) => {
         COUNT(*)::int AS count
       FROM transactions
       WHERE user_id=$1
-        AND type=$2
+        AND COALESCE(type, 'expense')=$2
         AND transaction_date >= $3
         AND transaction_date < $4
       GROUP BY category
@@ -150,7 +150,7 @@ router.get("/daily", authMiddleware, async (req, res) => {
         COALESCE(SUM(amount),0)::bigint AS total
       FROM transactions
       WHERE user_id=$1
-        AND type=$2
+        AND COALESCE(type, 'expense')=$2
         AND transaction_date >= $3
         AND transaction_date < $4
       GROUP BY transaction_date::date
