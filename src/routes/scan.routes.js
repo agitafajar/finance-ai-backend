@@ -53,8 +53,8 @@ router.post("/receipt/parse", upload.single("file"), async (req, res) => {
     // ✅ insert DB
     const insertRes = await pool.query(
       `INSERT INTO transactions(user_id, amount, type, category, description, source, raw_text, created_at)
-       VALUES($1,$2,'expense',$3,$4,'scan',$5,NOW())
-       RETURNING *`,
+   VALUES($1,$2,'expense',$3,$4,'scan',$5,$6,NOW())
+   RETURNING *`,
       [
         1, // TODO: ganti JWT
         parsed.total,
@@ -75,7 +75,9 @@ router.post("/receipt/parse", upload.single("file"), async (req, res) => {
       saved: true,
     });
   } catch (e) {
-    return res.status(500).json({ message: "Scan parse failed", error: e.message });
+    return res
+      .status(500)
+      .json({ message: "Scan parse failed", error: e.message });
   }
 });
 
