@@ -1,24 +1,14 @@
-const fs = require("fs");
-const path = require("path");
-const { exec } = require("child_process");
+const { runTesseractOCR } = require("./ocr.tesseract");
+const { runGeminiOCR } = require("./ocr.gemini");
 
-function runOCR(filePath) {
-  return new Promise((resolve, reject) => {
-    const outputPath = `/tmp/ocr-${Date.now()}`;
+const OCR_PROVIDER = (process.env.OCR_PROVIDER || "tesseract").toLowerCase();
 
-    // -l ind = bahasa indonesia
-    const cmd = `tesseract "${filePath}" "${outputPath}" -l ind`;
+async function runOCR(imagePathOrBuffer, opts = {}) {
+  if (OCR_PROVIDER === "gemini") {
+    return runGeminiOCR(imagePathOrBuffer, opts);
+  }
 
-    exec(cmd, (err) => {
-      if (err) return reject(err);
-
-      const textFile = `${outputPath}.txt`;
-      const text = fs.readFileSync(textFile, "utf8");
-
-      fs.unlinkSync(textFile);
-      resolve(text.trim());
-    });
-  });
+  return runTesseractOCR(imagePathOrBuffer, opts);
 }
 
 module.exports = { runOCR };
