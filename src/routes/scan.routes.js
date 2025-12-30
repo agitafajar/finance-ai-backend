@@ -7,6 +7,7 @@ const { uploadToS3 } = require("../utils/s3");
 const { runOCR } = require("../utils/ocr");
 const { parseReceiptOCR } = require("../utils/parser");
 const authMiddleware = require("../middleware/auth.middleware");
+const { parseReceiptOCRv2 } = require("../utils/parser.v2");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -103,5 +104,71 @@ router.post(
     }
   }
 );
+
+router.post("/receipt/parse-v2", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "File required" });
+    if (!req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({ message: "Only image allowed" });
+    }
+
+    const { url, key } = await uploadToS3({
+      buffer: req.file.buffer,
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
+
+    // temp file
+    const tempPath = `/tmp/${Date.now()}-${req.file.originalname}`;
+    fs.writeFileSync(tempPath, req.file.buffer);
+
+    const text = await runOCR(tempPath);
+
+    fs.unlinkSync(tempPath);
+
+    const parsed = parseReceiptOCRv2(text);
+
+    // ✅ OPTION A: selalu return 200
+    if (!parsed.total) {
+      return res.status(200).json({
+        message: "OCR ok but total not detected",
+        url,
+        key,
+        text,
+        parsed,
+        saved: false,
+      });
+    }
+
+    // insert DB
+    const insertRes = await pool.query(
+      `INSERT INTO transactions(user_id, amount, type, category, description, source, raw_text, created_at)
+       VALUES($1,$2,'expense',$3,$4,$5,$6,NOW())
+       RETURNING *`,
+      [
+        1,
+        parsed.total,
+        parsed.category,
+        parsed.merchant || "Unknown Merchant",
+        "scan",
+        parsed.raw_text,
+      ]
+    );
+
+    return res.status(200).json({
+      message: "Parsed & Saved",
+      transaction: insertRes.rows[0],
+      url,
+      key,
+      text,
+      parsed,
+      saved: true,
+    });
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ message: "Scan parse failed", error: e.message });
+  }
+});
 
 module.exports = router;
