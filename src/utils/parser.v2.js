@@ -70,12 +70,14 @@ function extractTotalCandidates(text) {
     }
   }
 
-  // fallback: semua angka Rp di text (ambil yang terbesar)
-  const fallbackRp = text.match(/Rp[\s]*([\d.,]+)/gi) || [];
-  for (let r of fallbackRp) {
-    const value = normalizeNumber(r);
-    if (value) {
-      candidates.push({ label: "rp_fallback", value, line: r });
+  // fallback extra untuk kasus "Subtotal Rp. 200.000.000"
+  const fallback2 =
+    text.match(/(subtotal|bayar|total)\s*rp\.?\s*([0-9][0-9.,]*)/gi) || [];
+  for (const f of fallback2) {
+    const mm = f.match(/rp\.?\s*([0-9][0-9.,]*)/i);
+    if (mm) {
+      const value = normalizeNumber(mm[1]);
+      if (value) candidates.push({ label: "fallback_kw", value, line: f });
     }
   }
 
