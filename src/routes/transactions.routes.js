@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../config/db");
 const authMiddleware = require("../middleware/auth.middleware");
+const { Parser } = require("json2csv");
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ router.get("/", authMiddleware, async (req, res) => {
     const limit = Math.min(Number(req.query.limit || 20), 100);
     const offset = (page - 1) * limit;
 
-    const { source, type, category, from, to } = req.query;
+    const { source, type, category, from, to, search } = req.query;
 
     const where = [`user_id = $1`];
     const values = [userId];
@@ -108,6 +109,11 @@ router.get("/", authMiddleware, async (req, res) => {
     if (to) {
       where.push(`transaction_date <= $${idx++}`);
       values.push(to);
+    }
+    if (search) {
+      where.push(`(description ILIKE $${idx} OR category ILIKE $${idx})`);
+      values.push(`%${search}%`);
+      idx++;
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -259,6 +265,80 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     return res
       .status(500)
       .json({ message: "Delete transaction failed", error: e.message });
+  }
+});
+
+/**
+ * GET /transactions/export
+ * Downloads CSV of filtered transactions (no pagination)
+ */
+router.get("/export/csv", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { source, type, category, from, to, search } = req.query;
+
+    const where = [`user_id = $1`];
+    const values = [userId];
+    let idx = 2;
+
+    if (source) {
+      where.push(`source = $${idx++}`);
+      values.push(source);
+    }
+    if (type) {
+      where.push(`type = $${idx++}`);
+      values.push(type);
+    }
+    if (category) {
+      where.push(`category = $${idx++}`);
+      values.push(category);
+    }
+    if (from) {
+      where.push(`transaction_date >= $${idx++}`);
+      values.push(from);
+    }
+    if (to) {
+      where.push(`transaction_date <= $${idx++}`);
+      values.push(to);
+    }
+    if (search) {
+      where.push(`(description ILIKE $${idx} OR category ILIKE $${idx})`);
+      values.push(`%${search}%`);
+      idx++;
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    const query = `
+      SELECT transaction_date, type, category, amount, description, source
+      FROM transactions
+      ${whereSql}
+      ORDER BY transaction_date DESC
+    `;
+
+    const { rows } = await pool.query(query, values);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "No transactions to export" });
+    }
+
+    const fields = [
+      "transaction_date",
+      "type",
+      "category",
+      "amount",
+      "description",
+      "source",
+    ];
+    const opts = { fields };
+    const parser = new Parser(opts);
+    const csv = parser.parse(rows);
+
+    res.header("Content-Type", "text/csv");
+    res.header("Content-Disposition", "attachment; filename=transactions.csv");
+    return res.send(csv);
+  } catch (e) {
+    return res.status(500).json({ message: "Export failed", error: e.message });
   }
 });
 
