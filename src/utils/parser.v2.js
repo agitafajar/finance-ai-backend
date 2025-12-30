@@ -194,6 +194,28 @@ function extractMerchant(text) {
 // ============================
 // category inference
 // ============================
+// ============================
+// type inference (expense vs income)
+// ============================
+function inferType(text) {
+  const lower = text.toLowerCase();
+
+  // keywords for income
+  if (
+    /(transfer berhasil|dana masuk|terima|gaji|income|pendapatan|uang masuk|top up)/.test(
+      lower
+    )
+  ) {
+    return "income";
+  }
+
+  // default expense
+  return "expense";
+}
+
+// ============================
+// category inference
+// ============================
 function inferCategory(text) {
   const lower = text.toLowerCase();
 
@@ -206,6 +228,7 @@ function inferCategory(text) {
   if (/(pln|listrik|air|pdam|pulsa|paket data|internet)/.test(lower))
     return "Tagihan";
   if (/(apotek|rs|klinik|obat)/.test(lower)) return "Kesehatan";
+  if (/(gaji|salary|honor|transfer)/.test(lower)) return "Pendapatan";
 
   return "Lainnya";
 }
@@ -238,6 +261,7 @@ function parseReceiptOCRv2(rawText) {
   const date = pickBestDate(dateCandidates);
 
   const category = inferCategory(text);
+  const type = inferType(text);
   const confidence = computeConfidence({ total, date, merchant });
 
   const warnings = [];
@@ -250,6 +274,7 @@ function parseReceiptOCRv2(rawText) {
     total,
     date,
     category,
+    type,
     confidence,
     warnings,
     candidates: {
