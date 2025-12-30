@@ -20,7 +20,9 @@ exports.register = async (req, res) => {
     }
 
     // cek sudah ada?
-    const exists = await pool.query("SELECT id FROM users WHERE email=$1", [email]);
+    const exists = await pool.query("SELECT id FROM users WHERE email=$1", [
+      email,
+    ]);
     if (exists.rowCount > 0) {
       return res.status(400).json({ message: "Email already registered" });
     }
@@ -53,7 +55,9 @@ exports.register = async (req, res) => {
 
     return res.json({ message: "OTP sent to email", email });
   } catch (e) {
-    return res.status(500).json({ message: "Register failed", error: e.message });
+    return res
+      .status(500)
+      .json({ message: "Register failed", error: e.message });
   }
 };
 
@@ -68,7 +72,10 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Email & OTP required" });
     }
 
-    const userRes = await pool.query("SELECT id, email, is_verified FROM users WHERE email=$1", [email]);
+    const userRes = await pool.query(
+      "SELECT id, email, is_verified FROM users WHERE email=$1",
+      [email]
+    );
     if (userRes.rowCount === 0) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -102,8 +109,12 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP invalid" });
     }
 
-    await pool.query("UPDATE otp_verifications SET verified=true WHERE id=$1", [record.id]);
-    await pool.query("UPDATE users SET is_verified=true WHERE id=$1", [user.id]);
+    await pool.query("UPDATE otp_verifications SET verified=true WHERE id=$1", [
+      record.id,
+    ]);
+    await pool.query("UPDATE users SET is_verified=true WHERE id=$1", [
+      user.id,
+    ]);
 
     const token = signToken(user);
     return res.json({ message: "Verified", token });
@@ -123,7 +134,10 @@ exports.resendOtp = async (req, res) => {
       return res.status(400).json({ message: "Email required" });
     }
 
-    const userRes = await pool.query("SELECT id, email, is_verified FROM users WHERE email=$1", [email]);
+    const userRes = await pool.query(
+      "SELECT id, email, is_verified FROM users WHERE email=$1",
+      [email]
+    );
     if (userRes.rowCount === 0) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -142,7 +156,9 @@ exports.resendOtp = async (req, res) => {
     if (lastOtp.rowCount > 0) {
       const lastTime = new Date(lastOtp.rows[0].created_at).getTime();
       if (Date.now() - lastTime < 60 * 1000) {
-        return res.status(429).json({ message: "Wait 60 seconds before resend" });
+        return res
+          .status(429)
+          .json({ message: "Wait 60 seconds before resend" });
       }
     }
 
@@ -175,7 +191,9 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Email & password required" });
     }
 
-    const userRes = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
+    const userRes = await pool.query("SELECT * FROM users WHERE email=$1", [
+      email,
+    ]);
     if (userRes.rowCount === 0) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -197,5 +215,79 @@ exports.login = async (req, res) => {
     });
   } catch (e) {
     return res.status(500).json({ message: "Login failed", error: e.message });
+  }
+};
+
+// ============================
+// GET CURRENT USER PROFILE
+// ============================
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const userRes = await pool.query(
+      `SELECT id, name, email, is_verified, avatar_url, created_at
+       FROM users WHERE id=$1`,
+      [userId]
+    );
+
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({
+      user: userRes.rows[0],
+    });
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ message: "Get profile failed", error: e.message });
+  }
+};
+
+// ============================
+// UPDATE PROFILE
+// ============================
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, avatar_url } = req.body;
+
+    // Build dynamic query
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (name !== undefined) {
+      updates.push(`name=$${idx++}`);
+      values.push(name);
+    }
+    if (avatar_url !== undefined) {
+      updates.push(`avatar_url=$${idx++}`);
+      values.push(avatar_url);
+    }
+
+    if (updates.length === 0) {
+      return res.json({ message: "No changes" });
+    }
+
+    values.push(userId);
+    const query = `
+      UPDATE users
+      SET ${updates.join(", ")}
+      WHERE id=$${idx}
+      RETURNING id, name, email, avatar_url
+    `;
+
+    const result = await pool.query(query, values);
+
+    return res.json({
+      message: "Profile updated",
+      user: result.rows[0],
+    });
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ message: "Update profile failed", error: e.message });
   }
 };
