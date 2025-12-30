@@ -6,6 +6,7 @@ const pool = require("../config/db");
 const { uploadToS3 } = require("../utils/s3");
 const { runOCR } = require("../utils/ocr");
 const { parseReceiptOCR } = require("../utils/parser");
+const authMiddleware = require("../middleware/auth.middleware");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
