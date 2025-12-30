@@ -5,6 +5,66 @@ const authMiddleware = require("../middleware/auth.middleware");
 const router = express.Router();
 
 /**
+ * POST /transactions
+ * body: { amount, category, description, transaction_date, type, source }
+ */
+router.post("/", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      amount,
+      category,
+      description,
+      transaction_date,
+      type,
+      source = "manual",
+      raw_text,
+    } = req.body;
+
+    if (!amount || !type) {
+      return res.status(400).json({ message: "Amount & Type required" });
+    }
+
+    const insertRes = await pool.query(
+      `
+      INSERT INTO transactions (
+        user_id,
+        type,
+        category,
+        amount,
+        description,
+        transaction_date,
+        source,
+        raw_text,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      RETURNING *
+      `,
+      [
+        userId,
+        type,
+        category || "Lainnya",
+        amount,
+        description || "",
+        transaction_date || new Date(),
+        source,
+        raw_text || null,
+      ]
+    );
+
+    return res.status(201).json({
+      message: "Transaction created",
+      transaction: insertRes.rows[0],
+    });
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ message: "Create transaction failed", error: e.message });
+  }
+});
+
+/**
  * GET /transactions
  * query:
  * - page (default 1)

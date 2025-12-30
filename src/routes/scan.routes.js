@@ -56,46 +56,46 @@ router.post(
         });
       }
 
-      // ✅ insert DB
-      const insertRes = await pool.query(
-        `
-  INSERT INTO transactions (
-    user_id,
-    type,
-    category,
-    amount,
-    description,
-    source,
-    raw_text
-  )
-  VALUES (
-    $1,
-    'expense',
-    $2,
-    $3,
-    $4,
-    'scan',
-    $5
-  )
-  RETURNING *
-  `,
-        [
-          req.user.id,
-          parsed.category || "Lainnya",
-          parsed.total,
-          parsed.merchant || "Unknown Merchant",
-          parsed.raw_text,
-        ]
-      );
+      // ✅ insert DB - DISABLED for Review Flow
+      // const insertRes = await pool.query(
+      //   `
+      //   INSERT INTO transactions (
+      //     user_id,
+      //     type,
+      //     category,
+      //     amount,
+      //     description,
+      //     source,
+      //     raw_text
+      //   )
+      //   VALUES (
+      //     $1,
+      //     'expense',
+      //     $2,
+      //     $3,
+      //     $4,
+      //     'scan',
+      //     $5
+      //   )
+      //   RETURNING *
+      //   `,
+      //   [
+      //     req.user.id,
+      //     parsed.category || "Lainnya",
+      //     parsed.total,
+      //     parsed.merchant || "Unknown Merchant",
+      //     parsed.raw_text,
+      //   ]
+      // );
 
       return res.json({
-        message: "Parsed & Saved",
-        transaction: insertRes.rows[0],
+        message: "Parsed (Review Needed)",
+        // transaction: insertRes.rows[0],
         parsed,
         url,
         key,
         text,
-        saved: true,
+        saved: false, // Changed to false to trigger review on frontend
       });
     } catch (e) {
       return res
@@ -140,29 +140,29 @@ router.post("/receipt/parse-v2", upload.single("file"), async (req, res) => {
       });
     }
 
-    // insert DB
-    const insertRes = await pool.query(
-      `INSERT INTO transactions(user_id, amount, type, category, description, source, raw_text, created_at)
-       VALUES($1,$2,'expense',$3,$4,$5,$6,NOW())
-       RETURNING *`,
-      [
-        1,
-        parsed.total,
-        parsed.category,
-        parsed.merchant || "Unknown Merchant",
-        "scan",
-        parsed.raw_text,
-      ]
-    );
+    // insert DB - DISABLED for Review Flow
+    // const insertRes = await pool.query(
+    //   `INSERT INTO transactions(user_id, amount, type, category, description, source, raw_text, created_at)
+    //    VALUES($1,$2,'expense',$3,$4,$5,$6,NOW())
+    //    RETURNING *`,
+    //   [
+    //     1,
+    //     parsed.total,
+    //     parsed.category,
+    //     parsed.merchant || "Unknown Merchant",
+    //     "scan",
+    //     parsed.raw_text,
+    //   ]
+    // );
 
     return res.status(200).json({
-      message: "Parsed & Saved",
-      transaction: insertRes.rows[0],
+      message: "Parsed (Review Needed)",
+      // transaction: insertRes.rows[0],
       url,
       key,
       text,
       parsed,
-      saved: true,
+      saved: false,
     });
   } catch (e) {
     return res
