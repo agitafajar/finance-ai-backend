@@ -16,12 +16,15 @@ app.use(cors());
 app.use(express.json());
 app.use("/upload", uploadRoutes);
 app.use("/scan", scanRoutes);
+app.use("/transactions", require("./routes/transactions.routes"));
 
 // anti spam global (basic)
-app.use(rateLimit({
-  windowMs: 60 * 1000,
-  max: 200, // 200 req per menit
-}));
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 200, // 200 req per menit
+  })
+);
 
 app.get("/", (req, res) => {
   res.send("Finance AI Backend OK");
@@ -30,4 +33,3 @@ app.get("/", (req, res) => {
 app.use("/auth", authRoutes);
 
 module.exports = app;
-
