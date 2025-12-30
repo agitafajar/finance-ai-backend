@@ -111,7 +111,9 @@ router.get("/", authMiddleware, async (req, res) => {
       values.push(to);
     }
     if (search) {
-      where.push(`(description ILIKE $${idx} OR category ILIKE $${idx})`);
+      where.push(
+        `(COALESCE(description, 'Transaksi') ILIKE $${idx} OR category ILIKE $${idx})`
+      );
       values.push(`%${search}%`);
       idx++;
     }
@@ -302,7 +304,9 @@ router.get("/export/csv", authMiddleware, async (req, res) => {
       values.push(to);
     }
     if (search) {
-      where.push(`(description ILIKE $${idx} OR category ILIKE $${idx})`);
+      where.push(
+        `(COALESCE(description, 'Transaksi') ILIKE $${idx} OR category ILIKE $${idx})`
+      );
       values.push(`%${search}%`);
       idx++;
     }
